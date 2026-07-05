@@ -1,0 +1,145 @@
+// ResumeProof — Prisma Schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  plan          String   @default("free") // free | starter | pro | enterprise
+  webhookUrl    String?
+  webhookSecret String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  apiKeys            ApiKey[]
+  transactions       Transaction[]
+  webhookDeliveries  WebhookDelivery[]
+  auditLogs          AuditLog[]
+
+  @@map("clients")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  clientId  String
+  keyHash   String   @unique
+  prefix    String   // "rp_live_" or "rp_test_"
+  label     String?
+  isActive  Boolean  @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("api_keys")
+}
+
+model Transaction {
+  id               String    @id @default(uuid())
+  clientId         String
+  trackingId       String    @unique
+  candidateEmail   String?
+  githubUrl        String
+  jdText           String?
+  resumeFilename   String?
+  resumeText       String?   // cleared after 30 days
+  status           String    @default("pending") // pending|processing|done|failed
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  client            Client            @relation(fields: [clientId], references: [id])
+  job               Job?
+  result            Result?
+  webhookDeliveries WebhookDelivery[]
+
+  @@index([clientId])
+  @@index([trackingId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  transactionId String    @unique
+  bullJobId     String?
+  status        String    @default("queued") // queued|active|done|failed
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3)
+  errorMessage  String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("jobs")
+}
+
+model Result {
+  id                String   @id @default(uuid())
+  transactionId     String   @unique
+  confidenceScore   Int?
+  status            String?  // verified | flagged | rejected
+  githubUsername    String?
+  reposFound        Int?
+  claimedProjects   Int?
+  verifiedProjects  Int?
+  commitAuthorship  Boolean?
+  skillAlignment    Int?
+  matchedSkills     Json?
+  missingSkills     Json?
+  flags             Json?
+  rawGithubData     Json?
+  aiAnalysis        String?
+  createdAt         DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("results")
+}
+
+model WebhookDelivery {
+  id            String    @id @default(uuid())
+  transactionId String
+  clientId      String
+  url           String
+  payload       Json
+  statusCode    Int?
+  responseBody  String?
+  delivered     Boolean   @default(false)
+  attempt       Int       @default(1)
+  nextRetryAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  client      Client      @relation(fields: [clientId], references: [id])
+
+  @@index([transactionId])
+  @@index([delivered])
+  @@map("webhook_deliveries")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  clientId  String?
+  event     String   // e.g. "api_key.created", "verify.submitted", "webhook.delivered"
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

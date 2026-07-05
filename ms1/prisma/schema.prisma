@@ -1,0 +1,222 @@
+// ResumeProof — Prisma Schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  plan          String   @default("free") // free | starter | pro | enterprise
+  monthlyQuota  Int      @default(500)
+  webhookUrl    String?
+  webhookSecret String?
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  apiKeys            ApiKey[]
+  transactions       Transaction[]
+  webhookDeliveries  WebhookDelivery[]
+  auditLogs          AuditLog[]
+  emailVerifications EmailVerification[]
+  passwordResets     PasswordReset[]
+  sessions           Session[]
+
+  @@map("clients")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  clientId  String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  clientId  String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("password_resets")
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  clientId         String
+  refreshTokenHash String
+  expiresAt        DateTime
+  isRevoked        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("sessions")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  clientId  String
+  keyHash   String   @unique
+  prefix    String   // "rp_live_" or "rp_test_"
+  label     String?
+  isActive  Boolean  @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("api_keys")
+}
+
+model Transaction {
+  id               String    @id @default(uuid())
+  clientId         String
+  trackingId       String    @unique
+  candidateEmail   String?
+  githubUrl        String
+  jdText           String?
+  resumeFilename   String?
+  resumeText       String?   // cleared after 30 days
+  status           String    @default("pending") // pending|processing|done|failed
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  client            Client            @relation(fields: [clientId], references: [id])
+  job               Job?
+  result            Result?
+  webhookDeliveries WebhookDelivery[]
+
+  @@index([clientId])
+  @@index([trackingId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  transactionId String    @unique
+  bullJobId     String?
+  status        String    @default("queued") // queued|active|done|failed
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3)
+  errorMessage  String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("jobs")
+}
+
+model Result {
+  id                String   @id @default(uuid())
+  transactionId     String   @unique
+  confidenceScore   Int?
+  status            String?  // verified | flagged | rejected
+  githubUsername    String?
+  reposFound        Int?
+  claimedProjects   Int?
+  verifiedProjects  Int?
+  commitAuthorship  Boolean?
+  skillAlignment    Int?
+  matchedSkills     Json?
+  missingSkills     Json?
+  flags             Json?
+  rawGithubData     Json?
+  aiAnalysis        String?
+  createdAt         DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  @@map("results")
+}
+
+model WebhookDelivery {
+  id            String    @id @default(uuid())
+  transactionId String
+  clientId      String
+  url           String
+  payload       Json
+  statusCode    Int?
+  responseBody  String?
+  delivered     Boolean   @default(false)
+  attempt       Int       @default(1)
+  nextRetryAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  client      Client      @relation(fields: [clientId], references: [id])
+
+  @@index([transactionId])
+  @@index([delivered])
+  @@map("webhook_deliveries")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  clientId  String?
+  event     String   // e.g. "api_key.created", "verify.submitted", "webhook.delivered"
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")  // admin | superadmin
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions     AdminSession[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id               String   @id @default(uuid())
+  adminId          String
+  refreshTokenHash String
+  expiresAt        DateTime
+  isRevoked        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_sessions")
+}
+
