@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F8F9FC;
+  --foreground: #0F172A;
+  --color-primary: #4F46E5;
+  --color-primary-hover: #4338CA;
+  --color-primary-light: #EEF2FF;
+  --color-success: #059669;
+  --color-success-light: #ECFDF5;
+  --color-warning: #D97706;
+  --color-warning-light: #FFFBEB;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEF2F2;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-muted: #64748B;
+  --color-subtle: #F1F5F9;
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-elevated: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --radius-card: 12px;
+  --radius-btn: 8px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out both;
+}
