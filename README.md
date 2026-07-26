@@ -3,7 +3,7 @@
 > **The trust layer for technical hiring.**
 > A production-oriented verification platform that cross-checks a candidate's resume claims against GitHub evidence, computes a deterministic confidence score, and delivers signed results to hiring systems asynchronously.
 
-[Live Demo](https://www.resumeproof.online/) · [License](LICENSE) · [Website](https://www.resumeproof.online/)
+[Live Demo](https://www.resumeproof.online/) · [Presentation](https://resumeproof.netlify.app/) · [License](LICENSE) · [Website](https://www.resumeproof.online/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Architecture](https://img.shields.io/badge/Architecture-Monorepo%20%2B%20Microservices-blue)](#architecture-overview)
@@ -28,6 +28,7 @@ The repository is organized as a monorepo with four major product surfaces:
 ## Live Demo
 
 - **Production site:** [https://www.resumeproof.online/](https://www.resumeproof.online/)
+- **Presentation:** [ResumeProof — Verify What's on the Resume](https://resumeproof.netlify.app/)
 - **Repository:** this workspace
 
 ---
